@@ -1723,7 +1723,7 @@ static void nvme_config_discard(struct gendisk *disk, struct nvme_ns *ns)
 	if (pdev->vendor == 0x10ee && pdev->device == 0x7028) {
 		blk_queue_flag_clear(QUEUE_FLAG_DISCARD, queue);
 		blk_queue_max_discard_sectors(queue, 0);
-		return 0;
+		return;
 	} 
 
 
