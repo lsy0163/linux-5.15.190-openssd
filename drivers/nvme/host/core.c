@@ -21,6 +21,9 @@
 #include <linux/pm_qos.h>
 #include <asm/unaligned.h>
 
+// PRJ4: Task 1
+#include <linux/string.h>
+
 #include "nvme.h"
 #include "fabrics.h"
 
@@ -79,6 +82,12 @@ MODULE_PARM_DESC(apst_secondary_latency_tol_us,
 static bool streams;
 module_param(streams, bool, 0644);
 MODULE_PARM_DESC(streams, "turn on support for Streams write directives");
+
+// PRJ4: Task 1
+static bool nvme_is_cosmos_openssd(const struct nvme_id_ctrl *id)
+{
+	return !strncasecmp(id->mn, "COSMOS+", 7);
+}
 
 /*
  * nvme_wq - hosts nvme related works that are not reset or delete
@@ -1718,14 +1727,13 @@ static void nvme_config_discard(struct gendisk *disk, struct nvme_ns *ns)
 	struct request_queue *queue = disk->queue;
 	u32 size = queue_logical_block_size(queue);
 
-	// PRJ4: Task 1
-	struct pci_dev *pdev = to_pci_dev(ctrl->device);
-	if (pdev->vendor == 0x10ee && pdev->device == 0x7028) {
-		blk_queue_flag_clear(QUEUE_FLAG_DISCARD, queue);
-		blk_queue_max_discard_sectors(queue, 0);
-		return;
-	} 
-
+	// // PRJ4: Task 1
+	// struct pci_dev *pdev = to_pci_dev(ctrl->device);
+	// if (pdev->vendor == 0x10ee && pdev->device == 0x7028) {
+	// 	blk_queue_flag_clear(QUEUE_FLAG_DISCARD, queue);
+	// 	blk_queue_max_discard_sectors(queue, 0);
+	// 	return;
+	// }
 
 	if (ctrl->max_discard_sectors == 0) {
 		blk_queue_flag_clear(QUEUE_FLAG_DISCARD, queue);
@@ -2920,7 +2928,8 @@ static int nvme_init_non_mdts_limits(struct nvme_ctrl *ctrl)
 	struct nvme_id_ctrl_nvm *id;
 	int ret;
 
-	if (ctrl->oncs & NVME_CTRL_ONCS_DSM) {
+	// PRJ4: Task 1
+	if ((ctrl->oncs & NVME_CTRL_ONCS_DSM) && !(ctrl->quirks & NVME_QUIRK_NO_DISCARD)) {
 		ctrl->max_discard_sectors = UINT_MAX;
 		ctrl->max_discard_segments = NVME_DSM_MAX_RANGES;
 	} else {
@@ -2941,6 +2950,10 @@ static int nvme_init_non_mdts_limits(struct nvme_ctrl *ctrl)
 		ctrl->max_zeroes_sectors = 0;
 
 	if (nvme_ctrl_limited_cns(ctrl))
+		return 0;
+
+	// PRJ4: Task 1
+	if (nvme_ctrl_limited_cns(ctrl) || (ctrl->quirks & NVME_QUIRK_NO_DISCARD))
 		return 0;
 
 	id = kzalloc(sizeof(*id), GFP_KERNEL);
@@ -2991,6 +3004,10 @@ static int nvme_init_identify(struct nvme_ctrl *ctrl)
 
 	if (!ctrl->identified) {
 		unsigned int i;
+
+		// PRJ4: Task 1
+		if (nvme_is_cosmos_openssd(id))
+			ctrl->quirks |= NVME_QUIRK_NO_DISCARD;
 
 		/*
 		 * Check for quirks.  Quirk can depend on firmware version,

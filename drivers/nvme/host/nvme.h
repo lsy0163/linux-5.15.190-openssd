@@ -164,6 +164,9 @@ enum nvme_quirks {
 	 * Disables simple suspend/resume path.
 	 */
 	NVME_QUIRK_FORCE_NO_SIMPLE_SUSPEND	= (1 << 20),
+
+	// PJR4: Task 1
+	NVME_QUIRK_NO_DISCARD				= (1 << 21),
 };
 
 /*
