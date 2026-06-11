@@ -1718,6 +1718,15 @@ static void nvme_config_discard(struct gendisk *disk, struct nvme_ns *ns)
 	struct request_queue *queue = disk->queue;
 	u32 size = queue_logical_block_size(queue);
 
+	// PRJ4: Task 1
+	struct pci_dev *pdev = to_pci_dev(ctrl->device);
+	if (pdev->vendor == 0x10ee && pdev->device == 0x7028) {
+		blk_queue_flag_clear(QUEUE_FLAG_DISCARD, queue);
+		blk_queue_max_discard_sectors(queue, 0);
+		return 0;
+	} 
+
+
 	if (ctrl->max_discard_sectors == 0) {
 		blk_queue_flag_clear(QUEUE_FLAG_DISCARD, queue);
 		return;
